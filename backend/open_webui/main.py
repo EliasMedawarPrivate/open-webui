@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from urllib.parse import urlencode, parse_qs, urlparse
 from pydantic import BaseModel
 from sqlalchemy import text
+from contextvars import ContextVar
 
 from typing import Optional
 from aiocache import cached
@@ -45,6 +46,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
+from open_webui.utils.chat_context import temporarychatenabled
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -931,6 +933,21 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 app.add_middleware(RedirectMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
 
+
+
+
+
+class TemporaryChatMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        is_temporarychat = request.headers.get("x-temporarychatenabled", "false")
+        token = temporarychatenabled.set(is_temporarychat)
+        try:
+            response = await call_next(request)
+        finally:
+            temporarychatenabled.reset(token)
+        return response
+    
+app.add_middleware(TemporaryChatMiddleware)
 
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
