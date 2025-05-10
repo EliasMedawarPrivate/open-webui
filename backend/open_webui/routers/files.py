@@ -32,7 +32,8 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
-from open_webui.storage.provider import Storage
+from open_webui.storage.provider import get_storage
+
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
 
@@ -105,7 +106,8 @@ def upload_file(
             "OpenWebUI-User-Name": user.name,
             "OpenWebUI-File-Id": id,
         }
-        contents, file_path = Storage.upload_file(file.file, filename, tags)
+        contents, file_path = get_storage().upload_file(file.file, filename, tags)
+      
 
         file_item = Files.insert_new_file(
             user.id,
@@ -135,7 +137,7 @@ def upload_file(
                         "audio/webm",
                     )
                 ):
-                    file_path = Storage.get_file(file_path)
+                    file_path =  get_storage().get_file(file_path)
                     result = transcribe(request, file_path)
 
                     process_file(
@@ -253,7 +255,7 @@ async def delete_all_files(user=Depends(get_admin_user)):
     result = Files.delete_all_files()
     if result:
         try:
-            Storage.delete_all_files()
+             get_storage().delete_all_files()
         except Exception as e:
             log.exception(e)
             log.error("Error deleting files")
@@ -393,7 +395,7 @@ async def get_file_content_by_id(
         or has_access_to_file(id, "read", user)
     ):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path =  get_storage().get_file(file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -468,7 +470,7 @@ async def get_html_file_content_by_id(id: str, user=Depends(get_verified_user)):
         or has_access_to_file(id, "read", user)
     ):
         try:
-            file_path = Storage.get_file(file.path)
+            file_path =  get_storage().get_file(file.path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -519,7 +521,7 @@ async def get_file_content_by_id(id: str, user=Depends(get_verified_user)):
         }
 
         if file_path:
-            file_path = Storage.get_file(file_path)
+            file_path =  get_storage().get_file(file_path)
             file_path = Path(file_path)
 
             # Check if the file already exists in the cache
@@ -576,7 +578,7 @@ async def delete_file_by_id(id: str, user=Depends(get_verified_user)):
         result = Files.delete_file_by_id(id)
         if result:
             try:
-                Storage.delete_file(file.path)
+                 get_storage().delete_file(file.path)
             except Exception as e:
                 log.exception(e)
                 log.error("Error deleting files")
