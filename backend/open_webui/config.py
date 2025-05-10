@@ -781,6 +781,9 @@ AZURE_STORAGE_KEY = os.environ.get("AZURE_STORAGE_KEY", None)
 UPLOAD_DIR = DATA_DIR / "uploads"
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+UPLOAD_DIR_TEMP_CHAT = Path(str(DATA_DIR) + "_TEMP_CHAT")/ "uploads"
+UPLOAD_DIR_TEMP_CHAT.mkdir(parents=True, exist_ok=True)
+
 
 ####################################
 # Cache DIR
@@ -789,6 +792,8 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 CACHE_DIR = DATA_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
+CACHE_DIR_SECURE = Path(str(DATA_DIR) + "_TEMP_CHAT")/ "cache"
+CACHE_DIR_SECURE.mkdir(parents=True, exist_ok=True)
 
 ####################################
 # DIRECT CONNECTIONS

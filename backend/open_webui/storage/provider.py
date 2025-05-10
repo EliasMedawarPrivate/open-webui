@@ -4,6 +4,8 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from typing import BinaryIO, Tuple, Dict
+from contextvars import ContextVar
+
 
 import boto3
 from botocore.config import Config
@@ -24,6 +26,7 @@ from open_webui.config import (
     AZURE_STORAGE_KEY,
     STORAGE_PROVIDER,
     UPLOAD_DIR,
+    UPLOAD_DIR_TEMP_CHAT
 )
 from google.cloud import storage
 from google.cloud.exceptions import GoogleCloudError, NotFound
@@ -32,7 +35,7 @@ from azure.identity import DefaultAzureCredential
 from azure.storage.blob import BlobServiceClient
 from azure.core.exceptions import ResourceNotFoundError
 from open_webui.env import SRC_LOG_LEVELS
-
+from open_webui.utils.chat_context import temporarychatenabled
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["MAIN"])
@@ -57,6 +60,49 @@ class StorageProvider(ABC):
     def delete_file(self, file_path: str) -> None:
         pass
 
+class LocalSecureStorageProvider(StorageProvider):
+    @staticmethod
+    def upload_file(
+        file: BinaryIO, filename: str, tags: Dict[str, str]
+    ) -> Tuple[bytes, str]:
+        contents = file.read()
+        if not contents:
+            raise ValueError(ERROR_MESSAGES.EMPTY_CONTENT)
+        file_path = f"{UPLOAD_DIR_TEMP_CHAT}/{filename}"
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        return contents, file_path
+
+    @staticmethod
+    def get_file(file_path: str) -> str:
+        """Handles downloading of the file from local storage."""
+        return file_path
+
+    @staticmethod
+    def delete_file(file_path: str) -> None:
+        """Handles deletion of the file from local storage."""
+        filename = file_path.split("/")[-1]
+        file_path = f"{UPLOAD_DIR_TEMP_CHAT}/{filename}"
+        if os.path.isfile(file_path):
+            os.remove(file_path)
+        else:
+            log.warning(f"File {file_path} not found in local storage.")
+
+    @staticmethod
+    def delete_all_files() -> None:
+        """Handles deletion of all files from local storage."""
+        if os.path.exists(UPLOAD_DIR_TEMP_CHAT):
+            for filename in os.listdir(UPLOAD_DIR_TEMP_CHAT):
+                file_path = os.path.join(UPLOAD_DIR_TEMP_CHAT, filename)
+                try:
+                    if os.path.isfile(file_path) or os.path.islink(file_path):
+                        os.unlink(file_path)  # Remove the file or link
+                    elif os.path.isdir(file_path):
+                        shutil.rmtree(file_path)  # Remove the directory
+                except Exception as e:
+                    log.exception(f"Failed to delete {file_path}. Reason: {e}")
+        else:
+            log.warning(f"Directory {UPLOAD_DIR_TEMP_CHAT} not found in local storage.")
 
 class LocalStorageProvider(StorageProvider):
     @staticmethod
@@ -341,7 +387,11 @@ class AzureStorageProvider(StorageProvider):
 
 
 def get_storage_provider(storage_provider: str):
-    if storage_provider == "local":
+    print("ASDASDASDASDAS");
+    print(temporarychatenabled.get("false"))
+    if temporarychatenabled.get("false") == "true":
+        Storage = LocalSecureStorageProvider()
+    elif storage_provider == "local":
         Storage = LocalStorageProvider()
     elif storage_provider == "s3":
         Storage = S3StorageProvider()
@@ -355,3 +405,6 @@ def get_storage_provider(storage_provider: str):
 
 
 Storage = get_storage_provider(STORAGE_PROVIDER)
+
+def get_storage():
+    return get_storage_provider(STORAGE_PROVIDER)

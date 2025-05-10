@@ -263,6 +263,7 @@ else:
     pass
 
 DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
+TEMP_DATABASE_URL = os.environ.get("DATABASE_URL", f"sqlite:///{DATA_DIR}/webui.db")
 
 # Replace the postgres:// with postgresql://
 if "postgres://" in DATABASE_URL:
