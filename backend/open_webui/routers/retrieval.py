@@ -34,7 +34,7 @@ from open_webui.models.knowledge import Knowledges
 from open_webui.storage.provider import Storage
 
 
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import get_vector_db_client
 
 # Document loaders
 from open_webui.retrieval.loaders.main import Loader
@@ -888,7 +888,7 @@ def save_docs_to_vector_db(
 
     # Check if entries with the same hash (metadata.hash) already exist
     if metadata and "hash" in metadata:
-        result = VECTOR_DB_CLIENT.query(
+        result = get_vector_db_client().query(
             collection_name=collection_name,
             filter={"hash": metadata["hash"]},
         )
@@ -953,11 +953,11 @@ def save_docs_to_vector_db(
                 metadata[key] = str(value)
 
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=collection_name):
+        if get_vector_db_client().has_collection(collection_name=collection_name):
             log.info(f"collection {collection_name} already exists")
 
             if overwrite:
-                VECTOR_DB_CLIENT.delete_collection(collection_name=collection_name)
+                get_vector_db_client().delete_collection(collection_name=collection_name)
                 log.info(f"deleting existing collection {collection_name}")
             elif add is False:
                 log.info(
@@ -999,7 +999,7 @@ def save_docs_to_vector_db(
             for idx, text in enumerate(texts)
         ]
 
-        VECTOR_DB_CLIENT.insert(
+        get_vector_db_client().insert(
             collection_name=collection_name,
             items=items,
         )
@@ -1036,7 +1036,7 @@ def process_file(
 
             try:
                 # /files/{file_id}/data/content/update
-                VECTOR_DB_CLIENT.delete_collection(collection_name=f"file-{file.id}")
+                get_vector_db_client().delete_collection(collection_name=f"file-{file.id}")
             except:
                 # Audio file upload pipeline
                 pass
@@ -1059,7 +1059,7 @@ def process_file(
             # Check if the file has already been processed and save the content
             # Usage: /knowledge/{id}/file/add, /knowledge/{id}/file/update
 
-            result = VECTOR_DB_CLIENT.query(
+            result = get_vector_db_client().query(
                 collection_name=f"file-{file.id}", filter={"file_id": file.id}
             )
 
@@ -1668,7 +1668,7 @@ def query_doc_handler(
     try:
         if request.app.state.config.ENABLE_RAG_HYBRID_SEARCH:
             collection_results = {}
-            collection_results[form_data.collection_name] = VECTOR_DB_CLIENT.get(
+            collection_results[form_data.collection_name] = get_vector_db_client().get(
                 collection_name=form_data.collection_name
             )
             return query_doc_with_hybrid_search(
@@ -1772,11 +1772,11 @@ class DeleteForm(BaseModel):
 @router.post("/delete")
 def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin_user)):
     try:
-        if VECTOR_DB_CLIENT.has_collection(collection_name=form_data.collection_name):
+        if get_vector_db_client().has_collection(collection_name=form_data.collection_name):
             file = Files.get_file_by_id(form_data.file_id)
             hash = file.hash
 
-            VECTOR_DB_CLIENT.delete(
+            get_vector_db_client().delete(
                 collection_name=form_data.collection_name,
                 metadata={"hash": hash},
             )
@@ -1790,7 +1790,7 @@ def delete_entries_from_collection(form_data: DeleteForm, user=Depends(get_admin
 
 @router.post("/reset/db")
 def reset_vector_db(user=Depends(get_admin_user)):
-    VECTOR_DB_CLIENT.reset()
+    get_vector_db_client().reset()
     Knowledges.delete_all_knowledge()
 
 

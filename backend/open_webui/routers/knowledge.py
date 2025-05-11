@@ -10,7 +10,7 @@ from open_webui.models.knowledge import (
     KnowledgeUserResponse,
 )
 from open_webui.models.files import Files, FileModel, FileMetadataResponse
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import get_vector_db_client
 from open_webui.routers.retrieval import (
     process_file,
     ProcessFileForm,
@@ -199,8 +199,8 @@ async def reindex_knowledge_files(request: Request, user=Depends(get_verified_us
             file_ids = knowledge_base.data.get("file_ids", [])
             files = Files.get_files_by_ids(file_ids)
             try:
-                if VECTOR_DB_CLIENT.has_collection(collection_name=knowledge_base.id):
-                    VECTOR_DB_CLIENT.delete_collection(
+                if get_vector_db_client().has_collection(collection_name=knowledge_base.id):
+                    get_vector_db_client().delete_collection(
                         collection_name=knowledge_base.id
                     )
             except Exception as e:
@@ -448,7 +448,7 @@ def update_file_from_knowledge_by_id(
         )
 
     # Remove content from the vector database
-    VECTOR_DB_CLIENT.delete(
+    get_vector_db_client().delete(
         collection_name=knowledge.id, filter={"file_id": form_data.file_id}
     )
 
@@ -519,7 +519,7 @@ def remove_file_from_knowledge_by_id(
 
     # Remove content from the vector database
     try:
-        VECTOR_DB_CLIENT.delete(
+        get_vector_db_client().delete(
             collection_name=knowledge.id, filter={"file_id": form_data.file_id}
         )
     except Exception as e:
@@ -530,8 +530,8 @@ def remove_file_from_knowledge_by_id(
     try:
         # Remove the file's collection from vector database
         file_collection = f"file-{form_data.file_id}"
-        if VECTOR_DB_CLIENT.has_collection(collection_name=file_collection):
-            VECTOR_DB_CLIENT.delete_collection(collection_name=file_collection)
+        if get_vector_db_client().has_collection(collection_name=file_collection):
+            get_vector_db_client().delete_collection(collection_name=file_collection)
     except Exception as e:
         log.debug("This was most likely caused by bypassing embedding processing")
         log.debug(e)
@@ -629,7 +629,7 @@ async def delete_knowledge_by_id(id: str, user=Depends(get_verified_user)):
 
     # Clean up vector DB
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        get_vector_db_client().delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass
@@ -662,7 +662,7 @@ async def reset_knowledge_by_id(id: str, user=Depends(get_verified_user)):
         )
 
     try:
-        VECTOR_DB_CLIENT.delete_collection(collection_name=id)
+        get_vector_db_client().delete_collection(collection_name=id)
     except Exception as e:
         log.debug(e)
         pass

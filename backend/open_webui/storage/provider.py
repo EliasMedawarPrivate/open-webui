@@ -387,8 +387,6 @@ class AzureStorageProvider(StorageProvider):
 
 
 def get_storage_provider(storage_provider: str):
-    print("ASDASDASDASDAS");
-    print(temporarychatenabled.get("false"))
     if temporarychatenabled.get("false") == "true":
         Storage = LocalSecureStorageProvider()
     elif storage_provider == "local":

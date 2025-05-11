@@ -46,7 +46,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response, StreamingResponse
 
-from open_webui.utils.chat_context import temporarychatenabled
+from open_webui.utils.chat_context import temporarychatenabled, temporray_user_id
 
 from open_webui.utils import logger
 from open_webui.utils.audit import AuditLevel, AuditLoggingMiddleware
@@ -392,6 +392,8 @@ from open_webui.utils.auth import (
     decode_token,
     get_admin_user,
     get_verified_user,
+    get_current_user 
+
 )
 from open_webui.utils.plugin import install_tool_and_function_dependencies
 from open_webui.utils.oauth import OAuthManager
@@ -937,17 +939,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 
 
-class TemporaryChatMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        is_temporarychat = request.headers.get("x-temporarychatenabled", "false")
-        token = temporarychatenabled.set(is_temporarychat)
-        try:
-            response = await call_next(request)
-        finally:
-            temporarychatenabled.reset(token)
-        return response
-    
-app.add_middleware(TemporaryChatMiddleware)
+
 
 @app.middleware("http")
 async def commit_session_after_request(request: Request, call_next):
@@ -996,7 +988,26 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+class TemporaryChatMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next  ):
+        is_temporarychat = request.headers.get("x-temporarychatenabled", "false")
+        token = temporarychatenabled.set(is_temporarychat)
+        token_user = None 
+        try:
+            if(request.headers.get("Authorization") is not None):
+                user = get_current_user(request,None, get_http_authorization_cred(request.headers.get("Authorization")) );
+                token_user = temporray_user_id.set(user.id)
 
+        finally:
+            try:
+                response = await call_next(request)
+            finally:
+                temporarychatenabled.reset(token)
+                if(token_user is not None):
+                    temporray_user_id.reset(token_user)
+        return response
+    
+app.add_middleware(TemporaryChatMiddleware)
 
 app.mount("/ws", socket_app)
 

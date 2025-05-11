@@ -1,3 +1,4 @@
+from open_webui.utils.auth import get_verified_user
 import chromadb
 import logging
 from chromadb import Settings
@@ -13,6 +14,7 @@ from open_webui.retrieval.vector.main import (
 )
 from open_webui.config import (
     CHROMA_DATA_PATH,
+    CHROMA_TEMPORRARY_DATA_PATH,
     CHROMA_HTTP_HOST,
     CHROMA_HTTP_PORT,
     CHROMA_HTTP_HEADERS,
@@ -23,25 +25,40 @@ from open_webui.config import (
     CHROMA_CLIENT_AUTH_CREDENTIALS,
 )
 from open_webui.env import SRC_LOG_LEVELS
+from fastapi import  Depends
 
 log = logging.getLogger(__name__)
 log.setLevel(SRC_LOG_LEVELS["RAG"])
 
 
 class ChromaClient(VectorDBBase):
-    def __init__(self):
+    def __init__(self, user_temporary_client: bool = False,userId: str = None):
         settings_dict = {
             "allow_reset": True,
             "anonymized_telemetry": False,
         }
+            
+
         if CHROMA_CLIENT_AUTH_PROVIDER is not None:
             settings_dict["chroma_client_auth_provider"] = CHROMA_CLIENT_AUTH_PROVIDER
         if CHROMA_CLIENT_AUTH_CREDENTIALS is not None:
             settings_dict["chroma_client_auth_credentials"] = (
                 CHROMA_CLIENT_AUTH_CREDENTIALS
             )
+         
+        if  user_temporary_client:
+         
+            path = f"{CHROMA_TEMPORRARY_DATA_PATH}/{userId}";
+            
+            print(path)
 
-        if CHROMA_HTTP_HOST != "":
+            self.client = chromadb.PersistentClient(
+                path=path,
+                settings=Settings(**settings_dict),
+                tenant=CHROMA_TENANT,
+                database=CHROMA_DATABASE,
+            )
+        elif CHROMA_HTTP_HOST != "":
             self.client = chromadb.HttpClient(
                 host=CHROMA_HTTP_HOST,
                 port=CHROMA_HTTP_PORT,

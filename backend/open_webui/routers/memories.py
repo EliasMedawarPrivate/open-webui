@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from open_webui.models.memories import Memories, MemoryModel
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import get_vector_db_client
 from open_webui.utils.auth import get_verified_user
 from open_webui.env import SRC_LOG_LEVELS
 
@@ -51,7 +51,7 @@ async def add_memory(
 ):
     memory = Memories.insert_new_memory(user.id, form_data.content)
 
-    VECTOR_DB_CLIENT.upsert(
+    get_vector_db_client().upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
@@ -82,7 +82,7 @@ class QueryMemoryForm(BaseModel):
 async def query_memory(
     request: Request, form_data: QueryMemoryForm, user=Depends(get_verified_user)
 ):
-    results = VECTOR_DB_CLIENT.search(
+    results = get_vector_db_client().search(
         collection_name=f"user-memory-{user.id}",
         vectors=[request.app.state.EMBEDDING_FUNCTION(form_data.content, user=user)],
         limit=form_data.k,
@@ -98,10 +98,10 @@ async def query_memory(
 async def reset_memory_from_vector_db(
     request: Request, user=Depends(get_verified_user)
 ):
-    VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
+    get_vector_db_client().delete_collection(f"user-memory-{user.id}")
 
     memories = Memories.get_memories_by_user_id(user.id)
-    VECTOR_DB_CLIENT.upsert(
+    get_vector_db_client().upsert(
         collection_name=f"user-memory-{user.id}",
         items=[
             {
@@ -133,7 +133,7 @@ async def delete_memory_by_user_id(user=Depends(get_verified_user)):
 
     if result:
         try:
-            VECTOR_DB_CLIENT.delete_collection(f"user-memory-{user.id}")
+            get_vector_db_client().delete_collection(f"user-memory-{user.id}")
         except Exception as e:
             log.error(e)
         return True
@@ -160,7 +160,7 @@ async def update_memory_by_id(
         raise HTTPException(status_code=404, detail="Memory not found")
 
     if form_data.content is not None:
-        VECTOR_DB_CLIENT.upsert(
+        get_vector_db_client().upsert(
             collection_name=f"user-memory-{user.id}",
             items=[
                 {
@@ -190,7 +190,7 @@ async def delete_memory_by_id(memory_id: str, user=Depends(get_verified_user)):
     result = Memories.delete_memory_by_id_and_user_id(memory_id, user.id)
 
     if result:
-        VECTOR_DB_CLIENT.delete(
+        get_vector_db_client().delete(
             collection_name=f"user-memory-{user.id}", ids=[memory_id]
         )
         return True

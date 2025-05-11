@@ -792,8 +792,8 @@ UPLOAD_DIR_TEMP_CHAT.mkdir(parents=True, exist_ok=True)
 CACHE_DIR = DATA_DIR / "cache"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-CACHE_DIR_SECURE = Path(str(DATA_DIR) + "_TEMP_CHAT")/ "cache"
-CACHE_DIR_SECURE.mkdir(parents=True, exist_ok=True)
+CACHE_DIR_TEMP = Path(str(DATA_DIR) + "_TEMP_CHAT")/ "cache"
+CACHE_DIR_TEMP.mkdir(parents=True, exist_ok=True)
 
 ####################################
 # DIRECT CONNECTIONS
@@ -1722,7 +1722,7 @@ VECTOR_DB = os.environ.get("VECTOR_DB", "chroma")
 
 # Chroma
 CHROMA_DATA_PATH = f"{DATA_DIR}/vector_db"
-
+CHROMA_TEMPORRARY_DATA_PATH= f"{DATA_DIR}_TEMP_CHAT/vector_db"
 if VECTOR_DB == "chroma":
     import chromadb
 

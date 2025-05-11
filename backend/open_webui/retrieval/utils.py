@@ -12,7 +12,7 @@ from langchain_community.retrievers import BM25Retriever
 from langchain_core.documents import Document
 
 from open_webui.config import VECTOR_DB
-from open_webui.retrieval.vector.connector import VECTOR_DB_CLIENT
+from open_webui.retrieval.vector.connector import get_vector_db_client
 
 from open_webui.models.users import UserModel
 from open_webui.models.files import Files
@@ -52,7 +52,7 @@ class VectorSearchRetriever(BaseRetriever):
         *,
         run_manager: CallbackManagerForRetrieverRun,
     ) -> list[Document]:
-        result = VECTOR_DB_CLIENT.search(
+        result = get_vector_db_client().search(
             collection_name=self.collection_name,
             vectors=[self.embedding_function(query, RAG_EMBEDDING_QUERY_PREFIX)],
             limit=self.top_k,
@@ -78,7 +78,7 @@ def query_doc(
 ):
     try:
         log.debug(f"query_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.search(
+        result = get_vector_db_client().search(
             collection_name=collection_name,
             vectors=[query_embedding],
             limit=k,
@@ -96,7 +96,7 @@ def query_doc(
 def get_doc(collection_name: str, user: UserModel = None):
     try:
         log.debug(f"get_doc:doc {collection_name}")
-        result = VECTOR_DB_CLIENT.get(collection_name=collection_name)
+        result = get_vector_db_client().get(collection_name=collection_name)
 
         if result:
             log.info(f"query_doc:result {result.ids} {result.metadatas}")
@@ -322,9 +322,9 @@ def query_collection_with_hybrid_search(
     for collection_name in collection_names:
         try:
             log.debug(
-                f"query_collection_with_hybrid_search:VECTOR_DB_CLIENT.get:collection {collection_name}"
+                f"query_collection_with_hybrid_search:get_vector_db_client().get:collection {collection_name}"
             )
-            collection_results[collection_name] = VECTOR_DB_CLIENT.get(
+            collection_results[collection_name] = get_vector_db_client().get(
                 collection_name=collection_name
             )
         except Exception as e:

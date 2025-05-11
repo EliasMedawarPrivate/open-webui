@@ -2,7 +2,6 @@ import { get } from 'svelte/store';
 import {  temporaryChatEnabled } from '$lib/stores';
 
 if (typeof window !== 'undefined') {
-  debugger;
   const originalFetch = window.fetch;
   window.fetch = (input, init = {}) => {
     const raw = get(temporaryChatEnabled);
