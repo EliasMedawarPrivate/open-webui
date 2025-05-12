@@ -90,6 +90,7 @@ from open_webui.env import (
     ENABLE_REALTIME_CHAT_SAVE,
 )
 from open_webui.constants import TASKS
+from open_webui.utils.chat_context import temporarychatenabled, temporray_user_id
 
 
 logging.basicConfig(stream=sys.stdout, level=GLOBAL_LOG_LEVEL)
@@ -576,6 +577,11 @@ async def chat_image_generation_handler(
     return form_data
 
 
+all_contextvars = [temporarychatenabled, temporray_user_id]
+def set_context(context):
+    for var, value in context:
+        var.set(value)
+
 async def chat_completion_files_handler(
     request: Request, body: dict, user: UserModel
 ) -> tuple[dict, dict[str, list]]:
@@ -617,7 +623,12 @@ async def chat_completion_files_handler(
         try:
             # Offload get_sources_from_files to a separate thread
             loop = asyncio.get_running_loop()
-            with ThreadPoolExecutor() as executor:
+            context_items = [(var, var.get()) for var in all_contextvars]
+            # Use ThreadPoolExecutor to parallelize the query processing
+            with ThreadPoolExecutor(
+                initializer=set_context,
+                initargs=(context_items,)
+            ) as executor:
                 sources = await loop.run_in_executor(
                     executor,
                     lambda: get_sources_from_files(
@@ -685,10 +696,9 @@ def apply_params_to_form_data(form_data, model):
 
     return form_data
 
-
 async def process_chat_payload(request, form_data, user, metadata, model):
 
-    form_data = apply_params_to_form_data(form_data, model)
+    
     log.debug(f"form_data: {form_data}")
 
     event_emitter = get_event_emitter(metadata)

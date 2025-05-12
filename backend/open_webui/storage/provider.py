@@ -388,8 +388,10 @@ class AzureStorageProvider(StorageProvider):
 
 def get_storage_provider(storage_provider: str):
     if temporarychatenabled.get("false") == "true":
+        print("USING TEMPORARY CHAT STORAGE");
         Storage = LocalSecureStorageProvider()
     elif storage_provider == "local":
+        print("USING local CHAT STORAGE");
         Storage = LocalStorageProvider()
     elif storage_provider == "s3":
         Storage = S3StorageProvider()

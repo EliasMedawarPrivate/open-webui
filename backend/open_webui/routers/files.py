@@ -33,6 +33,7 @@ from open_webui.routers.knowledge import get_knowledge, get_knowledge_list
 from open_webui.routers.retrieval import ProcessFileForm, process_file
 from open_webui.routers.audio import transcribe
 from open_webui.storage.provider import get_storage
+from open_webui.utils.chat_context import temporarychatenabled, temporray_user_id
 
 from open_webui.utils.auth import get_admin_user, get_verified_user
 from pydantic import BaseModel
@@ -168,6 +169,9 @@ def upload_file(
                 )
 
         if file_item:
+            if temporarychatenabled.get("false") == "true":
+                Files.update_file_data_by_id(file_item.id, {"content": ""})
+                get_storage().delete_all_files();
             return file_item
         else:
             raise HTTPException(
@@ -181,7 +185,7 @@ def upload_file(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=ERROR_MESSAGES.DEFAULT(e),
         )
-
+    
 
 ############################
 # List Files

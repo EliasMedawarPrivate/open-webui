@@ -19,6 +19,7 @@ from open_webui.models.files import Files
 
 from open_webui.retrieval.vector.main import GetResult
 
+from open_webui.utils.chat_context import temporarychatenabled, temporray_user_id
 
 from open_webui.env import (
     SRC_LOG_LEVELS,
@@ -77,6 +78,8 @@ def query_doc(
     collection_name: str, query_embedding: list[float], k: int, user: UserModel = None
 ):
     try:
+        print("query_docquery_docquery_docquery_doc");
+        print(user);
         log.debug(f"query_doc:doc {collection_name}")
         result = get_vector_db_client().search(
             collection_name=collection_name,
@@ -252,6 +255,11 @@ def get_all_items_from_collections(collection_names: list[str]) -> dict:
 
     return merge_get_results(results)
 
+all_contextvars = [temporarychatenabled, temporray_user_id]
+def set_context(context):
+    for var, value in context:
+        var.set(value)
+
 
 def query_collection(
     collection_names: list[str],
@@ -259,8 +267,10 @@ def query_collection(
     embedding_function,
     k: int,
 ) -> dict:
+    
     results = []
     error = False
+
 
     def process_query_collection(collection_name, query_embedding):
         try:
@@ -283,9 +293,16 @@ def query_collection(
         f"query_collection: processing {len(queries)} queries across {len(collection_names)} collections"
     )
 
-    with ThreadPoolExecutor() as executor:
+    context_items = [(var, var.get()) for var in all_contextvars]
+    # Use ThreadPoolExecutor to parallelize the query processing
+    with ThreadPoolExecutor(
+        initializer=set_context,
+        initargs=(context_items,)
+    ) as executor:
         future_results = []
         for query_embedding in query_embeddings:
+            print("query_collectionquery_collectionquery_collectionquery_collection");
+
             for collection_name in collection_names:
                 result = executor.submit(
                     process_query_collection, collection_name, query_embedding
@@ -361,7 +378,12 @@ def query_collection_with_hybrid_search(
         for q in queries
     ]
 
-    with ThreadPoolExecutor() as executor:
+    context_items = [(var, var.get()) for var in all_contextvars]
+    # Use ThreadPoolExecutor to parallelize the query processing
+    with ThreadPoolExecutor(
+        initializer=set_context,
+        initargs=(context_items,)
+    ) as executor:
         future_results = [executor.submit(process_query, cn, q) for cn, q in tasks]
         task_results = [future.result() for future in future_results]
 
@@ -439,7 +461,7 @@ def get_sources_from_files(
     log.debug(
         f"files: {files} {queries} {embedding_function} {reranking_function} {full_context}"
     )
-
+    print("ASSSSSSSSSSSSSSSSSSSSSSSS");
     extracted_collections = []
     relevant_contexts = []
 
@@ -448,6 +470,7 @@ def get_sources_from_files(
         context = None
         if file.get("docs"):
             # BYPASS_WEB_SEARCH_EMBEDDING_AND_RETRIEVAL
+            
             context = {
                 "documents": [[doc.get("content") for doc in file.get("docs")]],
                 "metadatas": [[doc.get("metadata") for doc in file.get("docs")]],
@@ -462,6 +485,7 @@ def get_sources_from_files(
             file.get("type") != "web_search"
             and request.app.state.config.BYPASS_EMBEDDING_AND_RETRIEVAL
         ):
+
             # BYPASS_EMBEDDING_AND_RETRIEVAL
             if file.get("type") == "collection":
                 file_ids = file.get("data", {}).get("file_ids", [])
@@ -487,6 +511,7 @@ def get_sources_from_files(
                 }
 
             elif file.get("id"):
+
                 file_object = Files.get_file_by_id(file.get("id"))
                 if file_object:
                     context = {
@@ -509,6 +534,7 @@ def get_sources_from_files(
                     ],
                 }
         else:
+
             collection_names = []
             if file.get("type") == "collection":
                 if file.get("legacy"):
@@ -558,6 +584,7 @@ def get_sources_from_files(
                                 )
 
                         if (not hybrid_search) or (context is None):
+                            print("ASSSSSSSSSSSSSSSSSSSSSSSS>query_collection")
                             context = query_collection(
                                 collection_names=collection_names,
                                 queries=queries,
